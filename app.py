@@ -16,17 +16,20 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 num_classes = 2
 image_size = 256
 
-model_file_id = "1UKF-vg3I-csqeNzOmvf0Z-daEKi-o84h" 
+model_file_id = "1UKF-vg3I-csqeNzOmvf0Z-daEKi-o84h"
 model_path = "deeplabv3_resumed_epoch30.pth"
 
-demo_file_id = "1RMd3LiX84ZgDQUWQqG5jfWPBqGoiDPzJ"  
-demo_path = "how_it_works.png"
+demo_file_id = "1oXJDZw7O4AmbLQxx1dwJVUUSZ2puz2V_"
+demo_path = "demo_try.png"
 
-if not os.path.exists(model_path):
-    gdown.download(f"https://drive.google.com/uc?id={model_file_id}", model_path, quiet=False)
+howitworks_file_id = "1RMd3LiX84ZgDQUWQqG5jfWPBqGoiDPzJ"
+placeholder_path = "how_it_works.png"
 
-if not os.path.exists(demo_path):
-    gdown.download(f"https://drive.google.com/uc?id={demo_file_id}", demo_path, quiet=False)
+for path, file_id in [(model_path, model_file_id),
+                      (demo_path, demo_file_id),
+                      (placeholder_path, howitworks_file_id)]:
+    if not os.path.exists(path):
+        gdown.download(f"https://drive.google.com/uc?id={file_id}", path, quiet=False)
 
 @st.cache_resource(show_spinner=True)
 def load_model():
@@ -83,15 +86,31 @@ def tta_inference(model, img_tensor, scales=[0.75,1.0,1.25], flips=[None,'h','v'
     agg_output /= (len(scales)*len(flips))
     return agg_output
 
-st.set_page_config(page_title="VISION AI", layout="wide")
-st.title("✨ Ultimate Image Segmentation Dashboard")
+st.set_page_config(page_title="Pixel Wizard", layout="wide")
+st.title("✨ Pixel Wizard")
+st.markdown("_Magic segmentation & background removal at your fingertips_")
 
-uploaded_file = st.file_uploader("Upload Your Own Image", type=["jpg","jpeg","png"])
+with st.sidebar:
+    st.subheader("📖 How it works")
+    st.image(placeholder_path, use_column_width=True)
+    st.markdown("""
+    **Features:**  
+    - Remove or replace backgrounds  
+    - Highlight edges with custom styles  
+    - Download instantly  
+    Click **Try Demo Image** or upload your own image to start!
+    """)
 
-if not uploaded_file:
+col1, col2 = st.columns(2)
+use_demo = col1.button("Try Demo Image")
+uploaded_file = col2.file_uploader("Or Upload Your Own Image", type=["jpg","jpeg","png"])
+
+if use_demo:
     image = Image.open(demo_path).convert("RGB")
-else:
+elif uploaded_file:
     image = Image.open(uploaded_file).convert("RGB")
+else:
+    st.stop()
 
 img_tensor = transform(image).unsqueeze(0).to(device)
 
@@ -105,6 +124,7 @@ final_mask = refine_mask(prob_mask, min_size=min_size, dilate_size=dilate_size)
 
 mask_resized = Image.fromarray((final_mask*255).astype(np.uint8)).resize(image.size, resample=Image.NEAREST)
 mask_bool = np.array(mask_resized).astype(bool)
+mask_img = Image.fromarray((mask_bool*255).astype(np.uint8))
 
 st.sidebar.subheader("Edge Overlay Settings")
 edge_color = st.sidebar.color_picker("Edge Color", "#00FF00")
