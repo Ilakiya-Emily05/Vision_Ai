@@ -102,15 +102,19 @@ h1,h3 {{
     color:white;
     font-family: 'Fredoka One', cursive;
 }}
+
+.css-1aumxhk .stSlider>div>div>div>div {{
+    background: linear-gradient(90deg, #ffb6c1, #ff69b4);
+    border-radius: 12px;
+}}
 </style>
 """, unsafe_allow_html=True)
 
 st.markdown("<h1 style='text-align:center'>Pixel Wizard</h1>", unsafe_allow_html=True)
 st.markdown("<h3 style='text-align:center'>Transforming Images with Precision and Magic</h3>", unsafe_allow_html=True)
 
-st.image(how_it_works_path, width=300, caption="How It Works", use_container_width=False)
-
-st.sidebar.title("Pixel Wizard Controls")
+st.markdown("<h2 style='color:#FF69B4; text-align:center'>How It Works</h2>", unsafe_allow_html=True)
+st.image(how_it_works_path, width=400, caption="Upload or try a demo image to see magic happen!", use_container_width=False)
 
 col1, col2 = st.columns(2)
 use_demo = col1.button("Try Demo Image")
@@ -126,9 +130,25 @@ else:
 
 img_tensor = transform(image).unsqueeze(0).to(device)
 
-st.sidebar.subheader("Mask Morphology Controls")
-min_size = st.sidebar.slider("Min Object Size", 100, 5000, 500, 50)
-dilate_size = st.sidebar.slider("Dilation Size", 1, 15, 3)
+if st.button("Open Controls"):
+    with st.sidebar:
+        st.title("Pixel Wizard Controls")
+        st.subheader("Mask Morphology Controls")
+        min_size = st.slider("Min Object Size", 100, 5000, 500, 50)
+        dilate_size = st.slider("Dilation Size", 1, 15, 3)
+
+        st.subheader("Edge Overlay Settings")
+        edge_color = st.color_picker("Edge Color", "#FF69B4")
+        edge_thick = st.slider("Edge Thickness", 1, 10, 2)
+
+        st.subheader("Background Removal / Replacement")
+        bg_option = st.selectbox("Background", ["Transparent", "Black", "White", "Custom Color"])
+        if bg_option == "Custom Color":
+            bg_color = st.color_picker("Pick BG Color", "#ffc5d3")
+        else:
+            bg_color = {"Black":"#000000", "White":"#FFFFFF", "Transparent":None}[bg_option]
+else:
+    min_size, dilate_size, edge_color, edge_thick, bg_color = 500, 3, "#FF69B4", 2, None
 
 output = tta_inference(model, img_tensor)
 prob_mask = torch.softmax(output, dim=1)[0,1].cpu().numpy()
@@ -137,9 +157,6 @@ final_mask = refine_mask(prob_mask, min_size=min_size, dilate_size=dilate_size)
 mask_resized = Image.fromarray((final_mask*255).astype(np.uint8)).resize(image.size, resample=Image.NEAREST)
 mask_bool = np.array(mask_resized).astype(bool)
 
-st.sidebar.subheader("Edge Overlay Settings")
-edge_color = st.sidebar.color_picker("Edge Color", "#00FF00")
-edge_thick = st.sidebar.slider("Edge Thickness", 1, 10, 2)
 contours = measure.find_contours(np.array(mask_resized)//255, 0.5)
 overlay_edges = image.copy()
 draw = ImageDraw.Draw(overlay_edges)
@@ -148,13 +165,6 @@ for contour in contours:
     contour = [tuple(p[::-1]) for p in contour]
     if len(contour)>1:
         draw.line(contour, fill=edge_color, width=edge_thick)
-
-st.sidebar.subheader("Background Removal / Replacement")
-bg_option = st.sidebar.selectbox("Background", ["Transparent", "Black", "White", "Custom Color"])
-if bg_option == "Custom Color":
-    bg_color = st.sidebar.color_picker("Pick BG Color", "#000000")
-else:
-    bg_color = {"Black":"#000000", "White":"#FFFFFF", "Transparent":None}[bg_option]
 
 img_np = np.array(image)
 if bg_color is None:
