@@ -11,7 +11,6 @@ from skimage import measure
 import io
 import gdown
 import os
-import base64
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 num_classes = 2
@@ -23,13 +22,14 @@ demo_file_id = "1t_gh8qPnjwpu7WwPQBz9YNp16ARvL8M8"
 demo_path = "demo_image.png"
 how_it_works_file_id = "1RMd3LiX84ZgDQUWQqG5jfWPBqGoiDPzJ"
 how_it_works_path = "how_it_works.png"
+cat_file_id = "1XCatFileIDReplaceMe"  # Replace with actual cat image file id
+cat_path = "cat.png"
 
-if not os.path.exists(model_path):
-    gdown.download(f"https://drive.google.com/uc?id={model_file_id}", model_path, quiet=False)
-if not os.path.exists(demo_path):
-    gdown.download(f"https://drive.google.com/uc?id={demo_file_id}", demo_path, quiet=False)
-if not os.path.exists(how_it_works_path):
-    gdown.download(f"https://drive.google.com/uc?id={how_it_works_file_id}", how_it_works_path, quiet=False)
+# Download files if missing
+for fid, path in [(model_file_id, model_path), (demo_file_id, demo_path),
+                  (how_it_works_file_id, how_it_works_path)]:
+    if not os.path.exists(path):
+        gdown.download(f"https://drive.google.com/uc?id={fid}", path, quiet=False)
 
 @st.cache_resource(show_spinner=True)
 def load_model():
@@ -88,31 +88,31 @@ def tta_inference(model, img_tensor, scales=[0.75,1.0,1.25], flips=[None,'h','v'
 
 st.set_page_config(page_title="Pixel Wizard", layout="wide")
 
-st.markdown("""
+st.markdown(f"""
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
 
-body {
+body {{
     background-color: #ffc5d3;
-}
+}}
 
-h1,h3 {
+h1,h3 {{
     font-family: 'Press Start 2P', cursive !important;
-}
+}}
 
-.stButton>button {
+.stButton>button {{
     border-radius:10px;
     background: linear-gradient(135deg, #FF69B4, #FFB6C1);
     color:white;
-}
-
-.css-1v0mbdj {padding:0px 10px 10px 10px;}
+    font-family: 'Press Start 2P', cursive;
+}}
 </style>
 """, unsafe_allow_html=True)
 
 st.markdown("<h1 style='text-align:center'>Pixel Wizard</h1>", unsafe_allow_html=True)
 st.markdown("<h3 style='text-align:center'>Transforming Images with Precision and Magic</h3>", unsafe_allow_html=True)
-st.image(how_it_works_path, width=300, use_container_width=False, caption="How It Works")
+
+st.image(how_it_works_path, width=300, caption="How It Works", use_container_width=False)
 
 st.sidebar.title("Pixel Wizard Controls")
 
@@ -140,7 +140,6 @@ final_mask = refine_mask(prob_mask, min_size=min_size, dilate_size=dilate_size)
 
 mask_resized = Image.fromarray((final_mask*255).astype(np.uint8)).resize(image.size, resample=Image.NEAREST)
 mask_bool = np.array(mask_resized).astype(bool)
-mask_img = Image.fromarray((mask_bool*255).astype(np.uint8))
 
 st.sidebar.subheader("Edge Overlay Settings")
 edge_color = st.sidebar.color_picker("Edge Color", "#00FF00")
@@ -179,6 +178,13 @@ with col1: st.image(image, caption="Original Image", use_container_width=True)
 with col2: st.image(segmented_output, caption="Segmented / BG Removed", use_container_width=True)
 with col3: st.image(overlay_edges, caption="Edges Overlay", use_container_width=True)
 
+# Cat at bottom
+try:
+    cat_img = Image.open(cat_path).convert("RGBA")
+    st.image(cat_img, width=100, caption="Cute Cat")
+except:
+    pass
+
 st.subheader("Download Options")
 buf_orig = io.BytesIO()
 image.save(buf_orig, format="PNG")
@@ -191,7 +197,3 @@ st.download_button("Download Segmented Object", buf_seg.getvalue(), file_name="s
 buf_edge = io.BytesIO()
 overlay_edges.save(buf_edge, format="PNG")
 st.download_button("Download Edge Overlay", buf_edge.getvalue(), file_name="edge_overlay.png", mime="image/png")
-
-# --- cute roaming cat at bottom ---
-cat_gif_url = "https://media.giphy.com/media/JIX9t2j0ZTN9S/giphy.gif"
-st.markdown(f"<div style='text-align:center'><img src='{cat_gif_url}' width='100'></div>", unsafe_allow_html=True)
