@@ -94,11 +94,14 @@ st.set_page_config(page_title="The Pixel Wizard", layout="wide")
 
 st.markdown("""
 <style>
+@import url('https://fonts.googleapis.com/css2?family=Dancing+Script&display=swap');
+
 [data-testid="stAppViewContainer"] {background-color: #E6E6FA;}
 [data-testid="stSidebar"] {background-color: #F0E6FF;}
-h1,h2,h3 {font-family: 'Comic Sans MS', cursive, sans-serif; color:#FF69B4; text-align:center;}
+
+h1,h2,h3,ul,li,p {font-family: 'Dancing Script', cursive; color:black; text-align:center;}
 div.stButton>button {background: linear-gradient(90deg,#FFB6C1,#FF69B4); color:white; font-weight:bold;}
-.css-1aumxhk, .stSlider>div>div>div>input {accent-color: #FF69B4;}
+.css-1aumxhk, .stSlider>div>div>div>input {accent-color: #9370DB;} /* purple sliders */
 </style>
 """, unsafe_allow_html=True)
 
@@ -138,6 +141,7 @@ else:
 
 img_tensor = transform(image).unsqueeze(0).to(device)
 
+# ---------- Sidebar ----------
 st.sidebar.subheader("Mask Morphology Controls")
 min_size = st.sidebar.slider("Min Object Size", 100, 5000, 500, 50)
 dilate_size = st.sidebar.slider("Dilation Size", 1, 15, 3)
@@ -153,6 +157,7 @@ if bg_option == "Custom Color":
 else:
     bg_color = {"Black":"#000000", "White":"#FFFFFF", "Transparent":None}[bg_option]
 
+# ---------- Mask & Overlay ----------
 output = tta_inference(model, img_tensor)
 prob_mask = torch.softmax(output, dim=1)[0,1].cpu().numpy()
 final_mask = refine_mask(prob_mask, min_size=min_size, dilate_size=dilate_size)
@@ -180,12 +185,14 @@ else:
     seg_out[~mask_bool] = bg_rgb
 segmented_output = Image.fromarray(seg_out)
 
+# ---------- Display ----------
 st.subheader("Results")
 col1,col2,col3 = st.columns(3)
 with col1: st.image(image, caption="Original Image", use_container_width=True)
 with col2: st.image(segmented_output, caption="Segmented / BG Removed", use_container_width=True)
 with col3: st.image(overlay_edges, caption="Edges Overlay", use_container_width=True)
 
+# ---------- Download ----------
 st.subheader("Download Options")
 buf_orig = io.BytesIO()
 image.save(buf_orig, format="PNG")
