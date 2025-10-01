@@ -20,3 +20,5 @@ matplotlib>=3.8.0
 # Utilities
 tqdm>=4.66.1
 numpy>=1.26.0
+
+gdown
