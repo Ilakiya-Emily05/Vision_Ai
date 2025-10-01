@@ -9,18 +9,35 @@ from skimage.morphology import remove_small_objects, remove_small_holes, closing
 from skimage.filters import threshold_otsu
 from skimage import measure
 import io
+import gdown
+import os
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 num_classes = 2
 image_size = 256
-checkpoint_path = r"C:\Users\ilaki\Desktop\VISON_AI\coco2017\deeplabv3_resumed_epoch30.pth"
+
+model_file_id = "1UKF-vg3I-csqeNzOmvf0Z-daEKi-o84h" 
+model_path = "deeplabv3_resumed_epoch30.pth"
+
+demo_file_id = "1RMd3LiX84ZgDQUWQqG5jfWPBqGoiDPzJ"  
+demo_path = "how_it_works.png"
+
+if not os.path.exists(model_path):
+    st.info("Downloading segmentation model...")
+    gdown.download(f"https://drive.google.com/uc?id={model_file_id}", model_path, quiet=False)
+    st.success("Model downloaded!")
+
+if not os.path.exists(demo_path):
+    st.info("Downloading demo image...")
+    gdown.download(f"https://drive.google.com/uc?id={demo_file_id}", demo_path, quiet=False)
+    st.success("Demo image downloaded!")
 
 @st.cache_resource(show_spinner=True)
 def load_model():
     model = torchvision.models.segmentation.deeplabv3_resnet50(
         pretrained=False, aux_loss=True, num_classes=num_classes
     )
-    checkpoint = torch.load(checkpoint_path, map_location=device)
+    checkpoint = torch.load(model_path, map_location=device)
     state_dict = {k: v for k, v in checkpoint.items() if "aux_classifier" not in k}
     model.load_state_dict(state_dict, strict=False)
     model.to(device)
@@ -73,26 +90,23 @@ def tta_inference(model, img_tensor, scales=[0.75,1.0,1.25], flips=[None,'h','v'
 st.set_page_config(page_title="VISION AI", layout="wide")
 st.title("✨ Ultimate Image Segmentation Dashboard")
 
-st.image("how_it_works.png", use_column_width=True)
-
 col1, col2 = st.columns(2)
 use_demo = col1.button("Try Demo Image")
 uploaded_file = col2.file_uploader("Or Upload Your Own Image", type=["jpg","jpeg","png"])
 
 if not uploaded_file and not use_demo:
-    st.markdown(" How does this tool work?")
+    st.image(demo_path, use_column_width=True)
+    st.markdown("**This tool lets you:**")
     st.markdown("""
-    **This tool lets you:**
-    -  Remove or replace backgrounds  
-    -  Highlight edges with cool styles  
-    -  Download results instantly  
-
-     Click **Try Demo Image** or **Upload Your Own Image** to get started!
+    - Remove or replace backgrounds  
+    - Highlight edges with cool styles  
+    - Download results instantly  
+    Click **Try Demo Image** or **Upload Your Own Image** to get started!
     """)
     st.stop()
 
 if use_demo:
-    image = Image.open(r"C:\Users\ilaki\Desktop\VISON_AI\coco2017\how_it_works.png").convert("RGB")  
+    image = Image.open(demo_path).convert("RGB")
 else:
     image = Image.open(uploaded_file).convert("RGB")
 
@@ -130,7 +144,7 @@ else:
     bg_color = {"Black":"#000000", "White":"#FFFFFF", "Transparent":None}[bg_option]
 
 img_np = np.array(image)
-if bg_color is None: 
+if bg_color is None:
     seg_out = np.zeros((image.size[1], image.size[0],4), dtype=np.uint8)
     seg_out[...,:3] = img_np * mask_bool[..., None]
     seg_out[...,3] = mask_bool.astype(np.uint8)*255
