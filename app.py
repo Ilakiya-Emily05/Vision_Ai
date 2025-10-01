@@ -1,6 +1,6 @@
 import streamlit as st
 import numpy as np
-from PIL import Image, ImageDraw, ImageFont
+from PIL import Image, ImageDraw
 import torch
 import torchvision
 from torchvision import transforms
@@ -94,8 +94,9 @@ st.set_page_config(page_title="The Pixel Wizard", layout="wide")
 
 st.markdown("""
 <style>
-body {background-color: #ffc5d3;}
-h1,h2 {font-family: 'Comic Sans MS', cursive, sans-serif; color: #FF69B4; text-align:center;}
+[data-testid="stAppViewContainer"] {background-color: #E6E6FA;}
+[data-testid="stSidebar"] {background-color: #F0E6FF;}
+h1,h2,h3 {font-family: 'Comic Sans MS', cursive, sans-serif; color:#FF69B4; text-align:center;}
 div.stButton>button {background: linear-gradient(90deg,#FFB6C1,#FF69B4); color:white; font-weight:bold;}
 .css-1aumxhk, .stSlider>div>div>div>input {accent-color: #FF69B4;}
 </style>
@@ -104,10 +105,11 @@ div.stButton>button {background: linear-gradient(90deg,#FFB6C1,#FF69B4); color:w
 st.markdown("<h1>The Pixel Wizard</h1>", unsafe_allow_html=True)
 st.markdown("<h2>Transforming Images with Precision and Magic</h2>", unsafe_allow_html=True)
 
+# ---------- How the Tool Works ----------
 how_img = Image.open(how_it_works_path).convert("RGBA")
 sparkle = Image.new("RGBA", how_img.size)
 draw = ImageDraw.Draw(sparkle)
-for _ in range(100):
+for _ in range(150):
     x,y = randint(0, how_img.width-1), randint(0, how_img.height-1)
     draw.ellipse((x,y,x+4,y+4), fill=(255,255,255,150))
 how_img = Image.alpha_composite(how_img, sparkle)
