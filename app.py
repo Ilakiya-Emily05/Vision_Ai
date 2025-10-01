@@ -19,7 +19,7 @@ image_size = 256
 model_file_id = "1UKF-vg3I-csqeNzOmvf0Z-daEKi-o84h"
 model_path = "deeplabv3_resumed_epoch30.pth"
 
-demo_file_id = "1oXJDZw7O4AmbLQxx1dwJVUUSZ2puz2V_"
+demo_file_id = "1t_gh8qPnjwpu7WwPQBz9YNp16ARvL8M8"
 demo_path = "demo_try.png"
 
 howitworks_file_id = "1RMd3LiX84ZgDQUWQqG5jfWPBqGoiDPzJ"
@@ -87,19 +87,11 @@ def tta_inference(model, img_tensor, scales=[0.75,1.0,1.25], flips=[None,'h','v'
     return agg_output
 
 st.set_page_config(page_title="Pixel Wizard", layout="wide")
+
+st.image(placeholder_path, use_column_width=True)
+
 st.title("✨ Pixel Wizard")
 st.markdown("_Magic segmentation & background removal at your fingertips_")
-
-with st.sidebar:
-    st.subheader("📖 How it works")
-    st.image(placeholder_path, use_column_width=True)
-    st.markdown("""
-    **Features:**  
-    - Remove or replace backgrounds  
-    - Highlight edges with custom styles  
-    - Download instantly  
-    Click **Try Demo Image** or upload your own image to start!
-    """)
 
 col1, col2 = st.columns(2)
 use_demo = col1.button("Try Demo Image")
