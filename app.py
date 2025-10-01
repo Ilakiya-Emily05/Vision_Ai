@@ -99,16 +99,21 @@ st.markdown("""
 [data-testid="stAppViewContainer"] {background-color: #E6E6FA;}
 [data-testid="stSidebar"] {background-color: #F0E6FF;}
 
-h1,h2,h3,ul,li,p {font-family: 'Dancing Script', cursive; color:black; text-align:center;}
+h1 {font-family: 'Dancing Script', cursive; font-size: 64px; color:black; text-align:center;}
+h2 {font-family: 'Dancing Script', cursive; font-size: 36px; color:black; text-align:center;}
+h3 {font-family: 'Dancing Script', cursive; font-size:28px; color:black; text-align:center;}
+ul,li,p {font-family: 'Dancing Script', cursive; font-size:20px; color:black; text-align:center;}
+
 div.stButton>button {background: linear-gradient(90deg,#FFB6C1,#FF69B4); color:white; font-weight:bold;}
 .css-1aumxhk, .stSlider>div>div>div>input {accent-color: #9370DB;} /* purple sliders */
 </style>
 """, unsafe_allow_html=True)
 
+# ---------- Title & Tagline ----------
 st.markdown("<h1>The Pixel Wizard</h1>", unsafe_allow_html=True)
 st.markdown("<h2>Transforming Images with Precision and Magic</h2>", unsafe_allow_html=True)
 
-# ---------- How the Tool Works ----------
+# ---------- How it Works ----------
 how_img = Image.open(how_it_works_path).convert("RGBA")
 sparkle = Image.new("RGBA", how_img.size)
 draw = ImageDraw.Draw(sparkle)
@@ -119,7 +124,7 @@ how_img = Image.alpha_composite(how_img, sparkle)
 st.image(how_img, use_container_width=True)
 
 st.markdown("""
-<h3 style='text-align:center;'>How the Tool Works:</h3>
+<h3>How the Tool Works:</h3>
 <ul>
 <li>Upload any image or try the demo</li>
 <li>Automatically segment objects with AI precision</li>
@@ -128,6 +133,7 @@ st.markdown("""
 </ul>
 """, unsafe_allow_html=True)
 
+# ---------- Demo / Upload ----------
 col1,col2 = st.columns(2)
 use_demo = col1.button("Try Demo Image")
 uploaded_file = col2.file_uploader("Or Upload Your Own Image", type=["jpg","jpeg","png"])
@@ -170,38 +176,4 @@ draw = ImageDraw.Draw(overlay_edges)
 for contour in contours:
     contour = contour * (image.size[0]/mask_resized.width)
     contour = [tuple(p[::-1]) for p in contour]
-    if len(contour)>1:
-        draw.line(contour, fill=edge_color, width=edge_thick)
-
-img_np = np.array(image)
-if bg_color is None:
-    seg_out = np.zeros((image.size[1], image.size[0],4), dtype=np.uint8)
-    seg_out[...,:3] = img_np * mask_bool[..., None]
-    seg_out[...,3] = mask_bool.astype(np.uint8)*255
-else:
-    bg_rgb = tuple(int(bg_color.lstrip("#")[i:i+2],16) for i in (0,2,4))
-    seg_out = np.zeros_like(img_np)
-    seg_out[mask_bool] = img_np[mask_bool]
-    seg_out[~mask_bool] = bg_rgb
-segmented_output = Image.fromarray(seg_out)
-
-# ---------- Display ----------
-st.subheader("Results")
-col1,col2,col3 = st.columns(3)
-with col1: st.image(image, caption="Original Image", use_container_width=True)
-with col2: st.image(segmented_output, caption="Segmented / BG Removed", use_container_width=True)
-with col3: st.image(overlay_edges, caption="Edges Overlay", use_container_width=True)
-
-# ---------- Download ----------
-st.subheader("Download Options")
-buf_orig = io.BytesIO()
-image.save(buf_orig, format="PNG")
-st.download_button("Download Original", buf_orig.getvalue(), file_name="original.png", mime="image/png")
-
-buf_seg = io.BytesIO()
-segmented_output.save(buf_seg, format="PNG")
-st.download_button("Download Segmented Object", buf_seg.getvalue(), file_name="segmented_object.png", mime="image/png")
-
-buf_edge = io.BytesIO()
-overlay_edges.save(buf_edge, format="PNG")
-st.download_button("Download Edge Overlay", buf_edge.getvalue(), file_name="edge_overlay.png", mime="image/png")
+   
