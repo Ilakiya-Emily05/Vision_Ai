@@ -16,21 +16,24 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 num_classes = 2
 image_size = 256
 
+# Google Drive links
 model_file_id = "1UKF-vg3I-csqeNzOmvf0Z-daEKi-o84h"
 model_path = "deeplabv3_resumed_epoch30.pth"
 
-demo_file_id = "1t_gh8qPnjwpu7WwPQBz9YNp16ARvL8M8"
-demo_path = "how_it_works.png"
+demo_file_id = "1oXJDZw7O4AmbLQxx1dwJVUUSZ2puz2V_"  # Correct demo image
+demo_path = "demo_image.png"
+
+header_file_id = "1t_gh8qPnjwpu7WwPQBz9YNp16ARvL8M8"  # How it works image
+header_path = "how_it_works.png"
 
 if not os.path.exists(model_path):
-    st.info("Downloading segmentation model...")
     gdown.download(f"https://drive.google.com/uc?id={model_file_id}", model_path, quiet=False)
-    st.success("Model downloaded!")
 
 if not os.path.exists(demo_path):
-    st.info("Downloading demo image...")
     gdown.download(f"https://drive.google.com/uc?id={demo_file_id}", demo_path, quiet=False)
-    st.success("Demo image downloaded!")
+
+if not os.path.exists(header_path):
+    gdown.download(f"https://drive.google.com/uc?id={header_file_id}", header_path, quiet=False)
 
 @st.cache_resource(show_spinner=True)
 def load_model():
@@ -65,7 +68,6 @@ def refine_mask(prob_mask, min_size=500, dilate_size=3):
     return mask.astype(np.uint8)
 
 def tta_inference(model, img_tensor, scales=[0.75,1.0,1.25], flips=[None,'h','v']):
-    model.eval()
     _, C, H, W = img_tensor.shape
     agg_output = torch.zeros((1, num_classes, H, W), device=img_tensor.device)
     for scale in scales:
@@ -85,55 +87,57 @@ def tta_inference(model, img_tensor, scales=[0.75,1.0,1.25], flips=[None,'h','v'
     agg_output /= (len(scales)*len(flips))
     return agg_output
 
-st.set_page_config(page_title="Pixel Wizard", layout="wide")
+st.set_page_config(page_title="Pixel Lofi", layout="wide")
 
 st.markdown("""
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
+body {
+    background-color: #C893FC;
+}
 .big-header {
-    font-family: 'Orbitron', sans-serif;
-    font-size: 48px;
-    color: #00FFFF;
+    font-family: 'Press Start 2P', cursive;
+    font-size: 50px;
+    color: #fff;
     text-align: center;
     margin-bottom: -10px;
 }
 .tagline {
-    font-family: 'Orbitron', sans-serif;
-    font-size: 20px;
-    color: #FFD700;
+    font-family: 'Press Start 2P', cursive;
+    font-size: 18px;
+    color: #FFD1F8;
     text-align: center;
-    margin-bottom: 40px;
+    margin-bottom: 20px;
 }
 .stButton>button {
-    background: linear-gradient(90deg, #ff00ff, #00ffff);
+    background: linear-gradient(90deg, #BC13FE, #FF9CEE);
     color: white;
-    font-size: 16px;
+    font-size: 14px;
     font-weight: bold;
-    padding: 12px 25px;
-    border-radius: 20px;
+    padding: 10px 20px;
+    border-radius: 15px;
     border: none;
-    box-shadow: 0 0 15px #ff00ff, 0 0 25px #00ffff;
+    box-shadow: 0 0 10px #BC13FE, 0 0 15px #FF9CEE;
 }
 .stSlider>div>div>div>div {
-    background: linear-gradient(to right, #ff00ff, #00ffff);
+    background: linear-gradient(to right, #BC13FE, #FF9CEE);
     border-radius: 15px;
-    height: 12px;
+    height: 10px;
 }
 .stSlider>div>div>div>div>div>div>div {
     background-color: #fff;
-    border: 2px solid #00ffff;
-    width: 25px;
-    height: 25px;
+    border: 2px solid #FF9CEE;
+    width: 20px;
+    height: 20px;
     border-radius: 50%;
-    box-shadow: 0 0 10px #ff00ff;
+    box-shadow: 0 0 8px #BC13FE;
 }
 </style>
 """, unsafe_allow_html=True)
 
-st.markdown('<div class="big-header">Pixel Wizard</div>', unsafe_allow_html=True)
-st.markdown('<div class="tagline">✨ Transforming Images Like Magic ✨</div>', unsafe_allow_html=True)
-
-st.image(demo_path, use_column_width=True)
+st.image(header_path, use_column_width=True)
+st.markdown('<div class="big-header">Pixel Lofi</div>', unsafe_allow_html=True)
+st.markdown('<div class="tagline">✨ Chill Segmentation Vibes ✨</div>', unsafe_allow_html=True)
 
 col1, col2 = st.columns(2)
 use_demo = col1.button("Try Demo Image")
@@ -160,7 +164,7 @@ final_mask = refine_mask(prob_mask, min_size=min_size, dilate_size=dilate_size)
 mask_resized = Image.fromarray((final_mask*255).astype(np.uint8)).resize(image.size, resample=Image.NEAREST)
 mask_bool = np.array(mask_resized).astype(bool)
 
-st.sidebar.subheader("Edge Overlay")
+st.sidebar.subheader("Edge Overlay Settings")
 edge_color = st.sidebar.color_picker("Edge Color", "#00FF00")
 edge_thick = st.sidebar.slider("Edge Thickness", 1, 10, 2)
 contours = measure.find_contours(np.array(mask_resized)//255, 0.5)
@@ -172,12 +176,9 @@ for contour in contours:
     if len(contour)>1:
         draw.line(contour, fill=edge_color, width=edge_thick)
 
-st.sidebar.subheader("Background")
-bg_option = st.sidebar.selectbox("Choose Background", ["Transparent", "Black", "White", "Custom Color"])
-if bg_option == "Custom Color":
-    bg_color = st.sidebar.color_picker("Pick BG Color", "#000000")
-else:
-    bg_color = {"Black":"#000000", "White":"#FFFFFF", "Transparent":None}[bg_option]
+st.sidebar.subheader("Background Removal / Replacement")
+bg_option = st.sidebar.selectbox("Background", ["Transparent", "Black", "White", "Custom Color"])
+bg_color = st.sidebar.color_picker("Pick BG Color", "#000000") if bg_option=="Custom Color" else {"Black":"#000000", "White":"#FFFFFF", "Transparent":None}[bg_option]
 
 img_np = np.array(image)
 if bg_color is None:
@@ -193,14 +194,19 @@ segmented_output = Image.fromarray(seg_out)
 
 st.subheader("Results")
 col1, col2, col3 = st.columns(3)
-with col1: st.image(image, caption="Original", use_column_width=True)
-with col2: st.image(segmented_output, caption="Segmented", use_column_width=True)
+with col1: st.image(image, caption="Original Image", use_column_width=True)
+with col2: st.image(segmented_output, caption="Segmented / BG Removed", use_column_width=True)
 with col3: st.image(overlay_edges, caption="Edges Overlay", use_column_width=True)
 
-st.subheader("Download")
-buf_orig = io.BytesIO(); image.save(buf_orig, format="PNG")
-st.download_button("Original", buf_orig.getvalue(), file_name="original.png", mime="image/png")
-buf_seg = io.BytesIO(); segmented_output.save(buf_seg, format="PNG")
-st.download_button("Segmented", buf_seg.getvalue(), file_name="segmented.png", mime="image/png")
-buf_edge = io.BytesIO(); overlay_edges.save(buf_edge, format="PNG")
-st.download_button("Edges", buf_edge.getvalue(), file_name="edges.png", mime="image/png")
+st.subheader("Download Options")
+buf_orig = io.BytesIO()
+image.save(buf_orig, format="PNG")
+st.download_button("Download Original", buf_orig.getvalue(), file_name="original.png", mime="image/png")
+
+buf_seg = io.BytesIO()
+segmented_output.save(buf_seg, format="PNG")
+st.download_button("Download Segmented Object", buf_seg.getvalue(), file_name="segmented_object.png", mime="image/png")
+
+buf_edge = io.BytesIO()
+overlay_edges.save(buf_edge, format="PNG")
+st.download_button("Download Edge Overlay", buf_edge.getvalue(), file_name="edge_overlay.png", mime="image/png")
