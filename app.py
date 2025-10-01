@@ -16,24 +16,17 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 num_classes = 2
 image_size = 256
 
-# Google Drive links
 model_file_id = "1UKF-vg3I-csqeNzOmvf0Z-daEKi-o84h"
 model_path = "deeplabv3_resumed_epoch30.pth"
 
-demo_file_id = "1oXJDZw7O4AmbLQxx1dwJVUUSZ2puz2V_"  # Correct demo image
-demo_path = "demo_image.png"
-
-header_file_id = "1t_gh8qPnjwpu7WwPQBz9YNp16ARvL8M8"  # How it works image
-header_path = "how_it_works.png"
+demo_file_id = "1t_gh8qPnjwpu7WwPQBz9YNp16ARvL8M8"
+demo_path = "how_it_works.png"
 
 if not os.path.exists(model_path):
     gdown.download(f"https://drive.google.com/uc?id={model_file_id}", model_path, quiet=False)
 
 if not os.path.exists(demo_path):
     gdown.download(f"https://drive.google.com/uc?id={demo_file_id}", demo_path, quiet=False)
-
-if not os.path.exists(header_path):
-    gdown.download(f"https://drive.google.com/uc?id={header_file_id}", header_path, quiet=False)
 
 @st.cache_resource(show_spinner=True)
 def load_model():
@@ -68,6 +61,7 @@ def refine_mask(prob_mask, min_size=500, dilate_size=3):
     return mask.astype(np.uint8)
 
 def tta_inference(model, img_tensor, scales=[0.75,1.0,1.25], flips=[None,'h','v']):
+    model.eval()
     _, C, H, W = img_tensor.shape
     agg_output = torch.zeros((1, num_classes, H, W), device=img_tensor.device)
     for scale in scales:
@@ -87,61 +81,27 @@ def tta_inference(model, img_tensor, scales=[0.75,1.0,1.25], flips=[None,'h','v'
     agg_output /= (len(scales)*len(flips))
     return agg_output
 
-st.set_page_config(page_title="Pixel Lofi", layout="wide")
+st.set_page_config(page_title="Pixel Wizard", layout="wide")
+st.markdown(
+    f"""
+    <style>
+    @import url('https://fonts.googleapis.com/css2?family=Baloo+2:wght@600&display=swap');
+    html, body {{background-color: #E29CFE;}}
+    .title {{font-family: 'Baloo 2', cursive; font-size: 60px; color: #fff; text-align: center;}}
+    .tagline {{font-family: 'Baloo 2', cursive; font-size: 24px; color: #FFF5F5; text-align: center; margin-bottom: 20px;}}
+    .stSlider > div > div > div {{background: linear-gradient(90deg, #FF9CEE, #BC13FE); border-radius: 10px;}}
+    .stButton>button {{background-color:#FF9CEE; color:white; font-weight:bold; border-radius:10px;}}
+    </style>
+    """, unsafe_allow_html=True
+)
 
-st.markdown("""
-<style>
-@import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
-body {
-    background-color: #C893FC;
-}
-.big-header {
-    font-family: 'Press Start 2P', cursive;
-    font-size: 50px;
-    color: #fff;
-    text-align: center;
-    margin-bottom: -10px;
-}
-.tagline {
-    font-family: 'Press Start 2P', cursive;
-    font-size: 18px;
-    color: #FFD1F8;
-    text-align: center;
-    margin-bottom: 20px;
-}
-.stButton>button {
-    background: linear-gradient(90deg, #BC13FE, #FF9CEE);
-    color: white;
-    font-size: 14px;
-    font-weight: bold;
-    padding: 10px 20px;
-    border-radius: 15px;
-    border: none;
-    box-shadow: 0 0 10px #BC13FE, 0 0 15px #FF9CEE;
-}
-.stSlider>div>div>div>div {
-    background: linear-gradient(to right, #BC13FE, #FF9CEE);
-    border-radius: 15px;
-    height: 10px;
-}
-.stSlider>div>div>div>div>div>div>div {
-    background-color: #fff;
-    border: 2px solid #FF9CEE;
-    width: 20px;
-    height: 20px;
-    border-radius: 50%;
-    box-shadow: 0 0 8px #BC13FE;
-}
-</style>
-""", unsafe_allow_html=True)
-
-st.image(header_path, use_column_width=True)
-st.markdown('<div class="big-header">Pixel Lofi</div>', unsafe_allow_html=True)
-st.markdown('<div class="tagline">✨ Chill Segmentation Vibes ✨</div>', unsafe_allow_html=True)
+st.markdown('<div class="title">✨ Pixel Wizard ✨</div>', unsafe_allow_html=True)
+st.markdown('<div class="tagline">Transform, Style & Animate Your Images Instantly</div>', unsafe_allow_html=True)
+st.image(demo_path, width=450)
 
 col1, col2 = st.columns(2)
 use_demo = col1.button("Try Demo Image")
-uploaded_file = col2.file_uploader("Upload Your Own Image", type=["jpg","jpeg","png"])
+uploaded_file = col2.file_uploader("Or Upload Your Own Image", type=["jpg","jpeg","png"])
 
 if not uploaded_file and not use_demo:
     st.stop()
@@ -153,7 +113,7 @@ else:
 
 img_tensor = transform(image).unsqueeze(0).to(device)
 
-st.sidebar.subheader("Mask Controls")
+st.sidebar.subheader("Mask Morphology Controls")
 min_size = st.sidebar.slider("Min Object Size", 100, 5000, 500, 50)
 dilate_size = st.sidebar.slider("Dilation Size", 1, 15, 3)
 
@@ -163,6 +123,7 @@ final_mask = refine_mask(prob_mask, min_size=min_size, dilate_size=dilate_size)
 
 mask_resized = Image.fromarray((final_mask*255).astype(np.uint8)).resize(image.size, resample=Image.NEAREST)
 mask_bool = np.array(mask_resized).astype(bool)
+mask_img = Image.fromarray((mask_bool*255).astype(np.uint8))
 
 st.sidebar.subheader("Edge Overlay Settings")
 edge_color = st.sidebar.color_picker("Edge Color", "#00FF00")
@@ -178,7 +139,10 @@ for contour in contours:
 
 st.sidebar.subheader("Background Removal / Replacement")
 bg_option = st.sidebar.selectbox("Background", ["Transparent", "Black", "White", "Custom Color"])
-bg_color = st.sidebar.color_picker("Pick BG Color", "#000000") if bg_option=="Custom Color" else {"Black":"#000000", "White":"#FFFFFF", "Transparent":None}[bg_option]
+if bg_option == "Custom Color":
+    bg_color = st.sidebar.color_picker("Pick BG Color", "#000000")
+else:
+    bg_color = {"Black":"#000000", "White":"#FFFFFF", "Transparent":None}[bg_option]
 
 img_np = np.array(image)
 if bg_color is None:
