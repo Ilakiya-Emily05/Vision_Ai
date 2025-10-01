@@ -90,22 +90,9 @@ def tta_inference(model, img_tensor, scales=[0.75,1.0,1.25], flips=[None,'h','v'
 st.set_page_config(page_title="VISION AI", layout="wide")
 st.title("✨ Ultimate Image Segmentation Dashboard")
 
-col1, col2 = st.columns(2)
-use_demo = col1.button("Try Demo Image")
-uploaded_file = col2.file_uploader("Or Upload Your Own Image", type=["jpg","jpeg","png"])
+uploaded_file = st.file_uploader("Upload Your Own Image", type=["jpg","jpeg","png"])
 
-if not uploaded_file and not use_demo:
-    st.image(demo_path, use_column_width=True)
-    st.markdown("**This tool lets you:**")
-    st.markdown("""
-    - Remove or replace backgrounds  
-    - Highlight edges with cool styles  
-    - Download results instantly  
-    Click **Try Demo Image** or **Upload Your Own Image** to get started!
-    """)
-    st.stop()
-
-if use_demo:
+if not uploaded_file:
     image = Image.open(demo_path).convert("RGB")
 else:
     image = Image.open(uploaded_file).convert("RGB")
