@@ -1,6 +1,6 @@
 import streamlit as st
 import numpy as np
-from PIL import Image, ImageDraw
+from PIL import Image, ImageDraw, ImageFont
 import torch
 import torchvision
 from torchvision import transforms
@@ -11,23 +11,35 @@ from skimage import measure
 import io
 import gdown
 import os
-import random
+import base64
+from random import randint
 
+# ----------------- Device -----------------
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 num_classes = 2
 image_size = 256
 
+# ----------------- Google Drive links -----------------
 model_file_id = "1UKF-vg3I-csqeNzOmvf0Z-daEKi-o84h"
 model_path = "deeplabv3_resumed_epoch30.pth"
+
 demo_file_id = "1t_gh8qPnjwpu7WwPQBz9YNp16ARvL8M8"
 demo_path = "demo_image.png"
+
 how_it_works_file_id = "1RMd3LiX84ZgDQUWQqG5jfWPBqGoiDPzJ"
 how_it_works_path = "how_it_works.png"
 
-for fid, path in [(model_file_id, model_path), (demo_file_id, demo_path), (how_it_works_file_id, how_it_works_path)]:
-    if not os.path.exists(path):
-        gdown.download(f"https://drive.google.com/uc?id={fid}", path, quiet=False)
+# ----------------- Download files if missing -----------------
+if not os.path.exists(model_path):
+    gdown.download(f"https://drive.google.com/uc?id={model_file_id}", model_path, quiet=False)
 
+if not os.path.exists(demo_path):
+    gdown.download(f"https://drive.google.com/uc?id={demo_file_id}", demo_path, quiet=False)
+
+if not os.path.exists(how_it_works_path):
+    gdown.download(f"https://drive.google.com/uc?id={how_it_works_file_id}", how_it_works_path, quiet=False)
+
+# ----------------- Load model -----------------
 @st.cache_resource(show_spinner=True)
 def load_model():
     model = torchvision.models.segmentation.deeplabv3_resnet50(
@@ -42,12 +54,14 @@ def load_model():
 
 model = load_model()
 
+# ----------------- Transforms -----------------
 transform = transforms.Compose([
     transforms.Resize((image_size, image_size)),
     transforms.ToTensor(),
     transforms.Normalize(mean=(0.485,0.456,0.406), std=(0.229,0.224,0.225))
 ])
 
+# ----------------- Mask Refinement -----------------
 def refine_mask(prob_mask, min_size=500, dilate_size=3):
     smoothed = gaussian_filter(prob_mask, sigma=1.0)
     smoothed = gaussian_filter(smoothed, sigma=2.0)
@@ -62,6 +76,7 @@ def refine_mask(prob_mask, min_size=500, dilate_size=3):
     mask = binary_dilation(mask, structure=disk(dilate_size))
     return mask.astype(np.uint8)
 
+# ----------------- TTA Inference -----------------
 def tta_inference(model, img_tensor, scales=[0.75,1.0,1.25], flips=[None,'h','v']):
     model.eval()
     _, C, H, W = img_tensor.shape
@@ -83,89 +98,90 @@ def tta_inference(model, img_tensor, scales=[0.75,1.0,1.25], flips=[None,'h','v'
     agg_output /= (len(scales)*len(flips))
     return agg_output
 
-st.set_page_config(page_title="Pixel Wizard", layout="wide")
+# ----------------- Streamlit Layout -----------------
+st.set_page_config(page_title="The Pixel Wizard", layout="wide")
 
-st.markdown(f"""
+# ---------- Custom CSS ----------
+st.markdown("""
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Fredoka+One&display=swap');
-
-body {{
-    background-color: #ffd0dc;
-}}
-
-h1,h3,h2,p {{
-    font-family: 'Fredoka One', cursive !important;
-}}
-
-.stButton>button {{
-    border-radius:12px;
-    background: linear-gradient(135deg, #ff7eb9, #ffb6c1);
+body {
+    background-color: #ffc5d3;
+}
+h1,h2 {
+    font-family: 'Comic Sans MS', cursive, sans-serif;
+    color: #FF69B4;
+}
+div.stButton > button {
+    background: linear-gradient(90deg,#FFB6C1,#FF69B4);
     color:white;
-    font-family: 'Fredoka One', cursive;
-}}
-
-.css-1aumxhk .stSlider>div>div>div>div {{
-    background: linear-gradient(90deg, #ffb6c1, #ff7eb9);
-    border-radius: 12px;
-}}
+    font-weight:bold;
+}
+.css-1aumxhk, .stSlider>div>div>div>input { /* kawaii sliders */
+    accent-color: #FF69B4;
+}
 </style>
 """, unsafe_allow_html=True)
 
-st.markdown("<h1 style='text-align:center'>Pixel Wizard</h1>", unsafe_allow_html=True)
-st.markdown("<h3 style='text-align:center'>Transforming Images with Precision and Magic</h3>", unsafe_allow_html=True)
+# ---------- Title ----------
+st.markdown("<h1 style='text-align:center;'>The Pixel Wizard</h1>", unsafe_allow_html=True)
+st.markdown("<h2 style='text-align:center;'>Transforming Images with Precision and Magic</h2>", unsafe_allow_html=True)
 
-st.markdown("<h2 style='color:#ff69b4; text-align:center'>How the Tool Works</h2>", unsafe_allow_html=True)
+# ---------- How the Tool Works ----------
+how_img = Image.open(how_it_works_path).convert("RGBA")
+# Add sparkles
+sparkle = Image.new("RGBA", how_img.size)
+draw = ImageDraw.Draw(sparkle)
+for _ in range(50):
+    x,y = randint(0, how_img.width-1), randint(0, how_img.height-1)
+    draw.ellipse((x,y,x+3,y+3), fill=(255,255,255,180))
+how_img = Image.alpha_composite(how_img, sparkle)
+st.image(how_img, caption="How the Tool Works", use_container_width=True)
+
 st.markdown("""
-<p style='text-align:center; font-size:18px; color:#ff4da6'>
-1. Upload your own image or try a demo.<br>
-2. The tool automatically segments the main object.<br>
-3. Adjust edges, background, and mask as you like.<br>
-4. Download your perfectly edited image instantly!
-</p>
+<ul>
+<li>Upload any image or try the demo</li>
+<li>Automatically segment objects with AI precision</li>
+<li>Remove or replace backgrounds easily</li>
+<li>Highlight edges with cool overlays</li>
+</ul>
 """, unsafe_allow_html=True)
 
-# Load How It Works image with sparkles
-how_img = Image.open(how_it_works_path).convert("RGBA")
-sparkles = Image.new("RGBA", how_img.size)
-draw = ImageDraw.Draw(sparkles)
-for _ in range(25):
-    x, y = random.randint(0, how_img.width-1), random.randint(0, how_img.height-1)
-    draw.text((x,y), "*", fill="#FF69B4")
-how_img = Image.alpha_composite(how_img, sparkles)
-st.image(how_img, width=500, use_container_width=False)
-
-col1, col2 = st.columns(2)
+# ---------- Demo / Upload ----------
+col1,col2 = st.columns(2)
 use_demo = col1.button("Try Demo Image")
 uploaded_file = col2.file_uploader("Or Upload Your Own Image", type=["jpg","jpeg","png"])
 
-if not uploaded_file and not use_demo:
-    st.stop()
-
 if use_demo:
     image = Image.open(demo_path).convert("RGB")
-else:
+elif uploaded_file:
     image = Image.open(uploaded_file).convert("RGB")
+else:
+    st.stop()
 
 img_tensor = transform(image).unsqueeze(0).to(device)
 
-if st.button("Open Controls"):
-    with st.sidebar:
-        st.title("Pixel Wizard Controls")
-        st.subheader("Mask Morphology Controls")
-        min_size = st.slider("Min Object Size", 100, 5000, 500, 50)
-        dilate_size = st.slider("Dilation Size", 1, 15, 3)
-        st.subheader("Edge Overlay Settings")
-        edge_color = st.color_picker("Edge Color", "#FF69B4")
-        edge_thick = st.slider("Edge Thickness", 1, 10, 2)
-        st.subheader("Background Removal / Replacement")
-        bg_option = st.selectbox("Background", ["Transparent", "Black", "White", "Custom Color"])
-        if bg_option == "Custom Color":
-            bg_color = st.color_picker("Pick BG Color", "#ffd0dc")
-        else:
-            bg_color = {"Black":"#000000", "White":"#FFFFFF", "Transparent":None}[bg_option]
-else:
-    min_size, dilate_size, edge_color, edge_thick, bg_color = 500, 3, "#FF69B4", 2, None
+# ---------- Optional Sidebar ----------
+show_sidebar = st.checkbox("Open Controls")
+if show_sidebar:
+    st.sidebar.subheader("Mask Morphology Controls")
+    min_size = st.sidebar.slider("Min Object Size", 100, 5000, 500, 50)
+    dilate_size = st.sidebar.slider("Dilation Size", 1, 15, 3)
 
+    st.sidebar.subheader("Edge Overlay Settings")
+    edge_color = st.sidebar.color_picker("Edge Color", "#FF69B4")
+    edge_thick = st.sidebar.slider("Edge Thickness", 1, 10, 2)
+
+    st.sidebar.subheader("Background Removal / Replacement")
+    bg_option = st.sidebar.selectbox("Background", ["Transparent", "Black", "White", "Custom Color"])
+    if bg_option == "Custom Color":
+        bg_color = st.sidebar.color_picker("Pick BG Color", "#FFC0CB")
+    else:
+        bg_color = {"Black":"#000000", "White":"#FFFFFF", "Transparent":None}[bg_option]
+else:
+    min_size, dilate_size, edge_color, edge_thick = 500,3,"#FF69B4",2
+    bg_color = None
+
+# ---------- Mask & Overlay ----------
 output = tta_inference(model, img_tensor)
 prob_mask = torch.softmax(output, dim=1)[0,1].cpu().numpy()
 final_mask = refine_mask(prob_mask, min_size=min_size, dilate_size=dilate_size)
@@ -193,12 +209,14 @@ else:
     seg_out[~mask_bool] = bg_rgb
 segmented_output = Image.fromarray(seg_out)
 
+# ---------- Display ----------
 st.subheader("Results")
-col1, col2, col3 = st.columns(3)
+col1,col2,col3 = st.columns(3)
 with col1: st.image(image, caption="Original Image", use_container_width=True)
 with col2: st.image(segmented_output, caption="Segmented / BG Removed", use_container_width=True)
 with col3: st.image(overlay_edges, caption="Edges Overlay", use_container_width=True)
 
+# ---------- Download ----------
 st.subheader("Download Options")
 buf_orig = io.BytesIO()
 image.save(buf_orig, format="PNG")
