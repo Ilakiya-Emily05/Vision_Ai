@@ -18,9 +18,10 @@ image_size = 256
 
 model_file_id = "1UKF-vg3I-csqeNzOmvf0Z-daEKi-o84h"
 model_path = "deeplabv3_resumed_epoch30.pth"
-
 demo_file_id = "1t_gh8qPnjwpu7WwPQBz9YNp16ARvL8M8"
-demo_path = "how_it_works.png"
+demo_path = "demo_image.png"
+how_it_works_file_id = "1RMd3LiX84ZgDQUWQqG5jfWPBqGoiDPzJ"
+how_it_works_path = "how_it_works.png"
 
 if not os.path.exists(model_path):
     gdown.download(f"https://drive.google.com/uc?id={model_file_id}", model_path, quiet=False)
@@ -28,9 +29,14 @@ if not os.path.exists(model_path):
 if not os.path.exists(demo_path):
     gdown.download(f"https://drive.google.com/uc?id={demo_file_id}", demo_path, quiet=False)
 
+if not os.path.exists(how_it_works_path):
+    gdown.download(f"https://drive.google.com/uc?id={how_it_works_file_id}", how_it_works_path, quiet=False)
+
 @st.cache_resource(show_spinner=True)
 def load_model():
-    model = torchvision.models.segmentation.deeplabv3_resnet50(pretrained=False, aux_loss=True, num_classes=num_classes)
+    model = torchvision.models.segmentation.deeplabv3_resnet50(
+        pretrained=False, aux_loss=True, num_classes=num_classes
+    )
     checkpoint = torch.load(model_path, map_location=device)
     state_dict = {k: v for k, v in checkpoint.items() if "aux_classifier" not in k}
     model.load_state_dict(state_dict, strict=False)
@@ -61,7 +67,6 @@ def refine_mask(prob_mask, min_size=500, dilate_size=3):
     return mask.astype(np.uint8)
 
 def tta_inference(model, img_tensor, scales=[0.75,1.0,1.25], flips=[None,'h','v']):
-    model.eval()
     _, C, H, W = img_tensor.shape
     agg_output = torch.zeros((1, num_classes, H, W), device=img_tensor.device)
     for scale in scales:
@@ -83,21 +88,37 @@ def tta_inference(model, img_tensor, scales=[0.75,1.0,1.25], flips=[None,'h','v'
 
 st.set_page_config(page_title="Pixel Wizard", layout="wide")
 st.markdown(
-    f"""
+    """
     <style>
-    @import url('https://fonts.googleapis.com/css2?family=Baloo+2:wght@600&display=swap');
-    html, body {{background-color: #E29CFE;}}
-    .title {{font-family: 'Baloo 2', cursive; font-size: 60px; color: #fff; text-align: center;}}
-    .tagline {{font-family: 'Baloo 2', cursive; font-size: 24px; color: #FFF5F5; text-align: center; margin-bottom: 20px;}}
-    .stSlider > div > div > div {{background: linear-gradient(90deg, #FF9CEE, #BC13FE); border-radius: 10px;}}
-    .stButton>button {{background-color:#FF9CEE; color:white; font-weight:bold; border-radius:10px;}}
+    @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
+    .stApp {
+        background-color: #D27AFF;
+        font-family: 'Press Start 2P', cursive;
+    }
+    .title {
+        font-size:40px;
+        color:#fff;
+        text-align:center;
+        font-weight:bold;
+    }
+    .tagline {
+        font-size:18px;
+        text-align:center;
+        color:#f8f0ff;
+        margin-bottom:20px;
+    }
+    .how-it-works img{
+        max-width: 450px;
+        display:block;
+        margin-left:auto;
+        margin-right:auto;
+    }
     </style>
     """, unsafe_allow_html=True
 )
-
-st.markdown('<div class="title">✨ Pixel Wizard ✨</div>', unsafe_allow_html=True)
-st.markdown('<div class="tagline">Transform, Style & Animate Your Images Instantly</div>', unsafe_allow_html=True)
-st.image(demo_path, width=450)
+st.markdown('<div class="how-it-works"><img src="{}"/></div>'.format(how_it_works_path), unsafe_allow_html=True)
+st.markdown('<div class="title">Pixel Wizard</div>', unsafe_allow_html=True)
+st.markdown('<div class="tagline">Transforming Images with Precision and Magic</div>', unsafe_allow_html=True)
 
 col1, col2 = st.columns(2)
 use_demo = col1.button("Try Demo Image")
@@ -106,11 +127,7 @@ uploaded_file = col2.file_uploader("Or Upload Your Own Image", type=["jpg","jpeg
 if not uploaded_file and not use_demo:
     st.stop()
 
-if use_demo:
-    image = Image.open(demo_path).convert("RGB")
-else:
-    image = Image.open(uploaded_file).convert("RGB")
-
+image = Image.open(demo_path if use_demo else uploaded_file).convert("RGB")
 img_tensor = transform(image).unsqueeze(0).to(device)
 
 st.sidebar.subheader("Mask Morphology Controls")
@@ -123,7 +140,6 @@ final_mask = refine_mask(prob_mask, min_size=min_size, dilate_size=dilate_size)
 
 mask_resized = Image.fromarray((final_mask*255).astype(np.uint8)).resize(image.size, resample=Image.NEAREST)
 mask_bool = np.array(mask_resized).astype(bool)
-mask_img = Image.fromarray((mask_bool*255).astype(np.uint8))
 
 st.sidebar.subheader("Edge Overlay Settings")
 edge_color = st.sidebar.color_picker("Edge Color", "#00FF00")
@@ -140,7 +156,7 @@ for contour in contours:
 st.sidebar.subheader("Background Removal / Replacement")
 bg_option = st.sidebar.selectbox("Background", ["Transparent", "Black", "White", "Custom Color"])
 if bg_option == "Custom Color":
-    bg_color = st.sidebar.color_picker("Pick BG Color", "#000000")
+    bg_color = st.sidebar.color_picker("Pick BG Color", "#BC13FE")
 else:
     bg_color = {"Black":"#000000", "White":"#FFFFFF", "Transparent":None}[bg_option]
 
@@ -166,11 +182,9 @@ st.subheader("Download Options")
 buf_orig = io.BytesIO()
 image.save(buf_orig, format="PNG")
 st.download_button("Download Original", buf_orig.getvalue(), file_name="original.png", mime="image/png")
-
 buf_seg = io.BytesIO()
 segmented_output.save(buf_seg, format="PNG")
 st.download_button("Download Segmented Object", buf_seg.getvalue(), file_name="segmented_object.png", mime="image/png")
-
 buf_edge = io.BytesIO()
 overlay_edges.save(buf_edge, format="PNG")
 st.download_button("Download Edge Overlay", buf_edge.getvalue(), file_name="edge_overlay.png", mime="image/png")
