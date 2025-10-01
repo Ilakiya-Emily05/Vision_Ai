@@ -22,12 +22,8 @@ demo_file_id = "1t_gh8qPnjwpu7WwPQBz9YNp16ARvL8M8"
 demo_path = "demo_image.png"
 how_it_works_file_id = "1RMd3LiX84ZgDQUWQqG5jfWPBqGoiDPzJ"
 how_it_works_path = "how_it_works.png"
-cat_file_id = "1XCatFileIDReplaceMe"  # Replace with actual cat image file id
-cat_path = "cat.png"
 
-# Download files if missing
-for fid, path in [(model_file_id, model_path), (demo_file_id, demo_path),
-                  (how_it_works_file_id, how_it_works_path)]:
+for fid, path in [(model_file_id, model_path), (demo_file_id, demo_path), (how_it_works_file_id, how_it_works_path)]:
     if not os.path.exists(path):
         gdown.download(f"https://drive.google.com/uc?id={fid}", path, quiet=False)
 
@@ -90,21 +86,21 @@ st.set_page_config(page_title="Pixel Wizard", layout="wide")
 
 st.markdown(f"""
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Fredoka+One&display=swap');
 
 body {{
     background-color: #ffc5d3;
 }}
 
 h1,h3 {{
-    font-family: 'Press Start 2P', cursive !important;
+    font-family: 'Fredoka One', cursive !important;
 }}
 
 .stButton>button {{
     border-radius:10px;
     background: linear-gradient(135deg, #FF69B4, #FFB6C1);
     color:white;
-    font-family: 'Press Start 2P', cursive;
+    font-family: 'Fredoka One', cursive;
 }}
 </style>
 """, unsafe_allow_html=True)
@@ -177,13 +173,6 @@ col1, col2, col3 = st.columns(3)
 with col1: st.image(image, caption="Original Image", use_container_width=True)
 with col2: st.image(segmented_output, caption="Segmented / BG Removed", use_container_width=True)
 with col3: st.image(overlay_edges, caption="Edges Overlay", use_container_width=True)
-
-# Cat at bottom
-try:
-    cat_img = Image.open(cat_path).convert("RGBA")
-    st.image(cat_img, width=100, caption="Cute Cat")
-except:
-    pass
 
 st.subheader("Download Options")
 buf_orig = io.BytesIO()
