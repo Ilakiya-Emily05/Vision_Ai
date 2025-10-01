@@ -12,20 +12,17 @@ import io
 import gdown
 import os
 
-# --- Device ---
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 num_classes = 2
 image_size = 256
 
-# --- Google Drive links ---
 model_file_id = "1UKF-vg3I-csqeNzOmvf0Z-daEKi-o84h"
 model_path = "deeplabv3_resumed_epoch30.pth"
 demo_file_id = "1t_gh8qPnjwpu7WwPQBz9YNp16ARvL8M8"
-how_it_works_file_id = "1RMd3LiX84ZgDQUWQqG5jfWPBqGoiDPzJ"
 demo_path = "demo_image.png"
+how_it_works_file_id = "1RMd3LiX84ZgDQUWQqG5jfWPBqGoiDPzJ"
 how_it_works_path = "how_it_works.png"
 
-# --- Download files if missing ---
 if not os.path.exists(model_path):
     gdown.download(f"https://drive.google.com/uc?id={model_file_id}", model_path, quiet=False)
 
@@ -35,7 +32,6 @@ if not os.path.exists(demo_path):
 if not os.path.exists(how_it_works_path):
     gdown.download(f"https://drive.google.com/uc?id={how_it_works_file_id}", how_it_works_path, quiet=False)
 
-# --- Load model ---
 @st.cache_resource(show_spinner=True)
 def load_model():
     model = torchvision.models.segmentation.deeplabv3_resnet50(
@@ -91,35 +87,35 @@ def tta_inference(model, img_tensor, scales=[0.75,1.0,1.25], flips=[None,'h','v'
     agg_output /= (len(scales)*len(flips))
     return agg_output
 
-# --- Streamlit page config ---
 st.set_page_config(page_title="Pixel Wizard", layout="wide")
 
-# --- CSS Styling ---
 st.markdown("""
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
+
 body {
-    background-color: #D98EFF;
+    background-color: #ffc5d3;
 }
-h1, h2, h3, h4, h5, h6 {
-    font-family: 'Press Start 2P', cursive;
+
+h1,h2,h3,h4,h5,h6,p,span,button,div {
+    font-family: 'Press Start 2P', cursive !important;
 }
+
 .stButton>button {
     border-radius:10px;
-    background-color:#8B2EFF;
+    background: linear-gradient(135deg, #FF69B4, #FFB6C1);
     color:white;
     font-family: 'Press Start 2P', cursive;
 }
-.css-1v0mbdj {padding:0px 10px 10px 10px;}  /* sidebar padding */
+
+.css-1v0mbdj {padding:0px 10px 10px 10px;}
 </style>
 """, unsafe_allow_html=True)
 
-# --- Header ---
-st.image(how_it_works_path, use_column_width=False, width=350)
 st.markdown("<h1 style='text-align:center'>Pixel Wizard</h1>", unsafe_allow_html=True)
 st.markdown("<h3 style='text-align:center'>Transforming Images with Precision and Magic</h3>", unsafe_allow_html=True)
+st.image(how_it_works_path, use_column_width=False, width=300, caption="How It Works", output_format="PNG")
 
-# --- Sidebar ---
 st.sidebar.title("Pixel Wizard Controls")
 
 col1, col2 = st.columns(2)
@@ -146,6 +142,7 @@ final_mask = refine_mask(prob_mask, min_size=min_size, dilate_size=dilate_size)
 
 mask_resized = Image.fromarray((final_mask*255).astype(np.uint8)).resize(image.size, resample=Image.NEAREST)
 mask_bool = np.array(mask_resized).astype(bool)
+mask_img = Image.fromarray((mask_bool*255).astype(np.uint8))
 
 st.sidebar.subheader("Edge Overlay Settings")
 edge_color = st.sidebar.color_picker("Edge Color", "#00FF00")
