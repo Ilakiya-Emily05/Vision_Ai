@@ -11,6 +11,7 @@ from skimage import measure
 import io
 import gdown
 import os
+import random
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 num_classes = 2
@@ -89,22 +90,22 @@ st.markdown(f"""
 @import url('https://fonts.googleapis.com/css2?family=Fredoka+One&display=swap');
 
 body {{
-    background-color: #ffc5d3;
+    background-color: #ffd0dc;
 }}
 
-h1,h3 {{
+h1,h3,h2,p {{
     font-family: 'Fredoka One', cursive !important;
 }}
 
 .stButton>button {{
-    border-radius:10px;
-    background: linear-gradient(135deg, #FF69B4, #FFB6C1);
+    border-radius:12px;
+    background: linear-gradient(135deg, #ff7eb9, #ffb6c1);
     color:white;
     font-family: 'Fredoka One', cursive;
 }}
 
 .css-1aumxhk .stSlider>div>div>div>div {{
-    background: linear-gradient(90deg, #ffb6c1, #ff69b4);
+    background: linear-gradient(90deg, #ffb6c1, #ff7eb9);
     border-radius: 12px;
 }}
 </style>
@@ -113,8 +114,25 @@ h1,h3 {{
 st.markdown("<h1 style='text-align:center'>Pixel Wizard</h1>", unsafe_allow_html=True)
 st.markdown("<h3 style='text-align:center'>Transforming Images with Precision and Magic</h3>", unsafe_allow_html=True)
 
-st.markdown("<h2 style='color:#FF69B4; text-align:center'>How It Works</h2>", unsafe_allow_html=True)
-st.image(how_it_works_path, width=400, caption="Upload or try a demo image to see magic happen!", use_container_width=False)
+st.markdown("<h2 style='color:#ff69b4; text-align:center'>How the Tool Works</h2>", unsafe_allow_html=True)
+st.markdown("""
+<p style='text-align:center; font-size:18px; color:#ff4da6'>
+1. Upload your own image or try a demo.<br>
+2. The tool automatically segments the main object.<br>
+3. Adjust edges, background, and mask as you like.<br>
+4. Download your perfectly edited image instantly!
+</p>
+""", unsafe_allow_html=True)
+
+# Load How It Works image with sparkles
+how_img = Image.open(how_it_works_path).convert("RGBA")
+sparkles = Image.new("RGBA", how_img.size)
+draw = ImageDraw.Draw(sparkles)
+for _ in range(25):
+    x, y = random.randint(0, how_img.width-1), random.randint(0, how_img.height-1)
+    draw.text((x,y), "*", fill="#FF69B4")
+how_img = Image.alpha_composite(how_img, sparkles)
+st.image(how_img, width=500, use_container_width=False)
 
 col1, col2 = st.columns(2)
 use_demo = col1.button("Try Demo Image")
@@ -136,15 +154,13 @@ if st.button("Open Controls"):
         st.subheader("Mask Morphology Controls")
         min_size = st.slider("Min Object Size", 100, 5000, 500, 50)
         dilate_size = st.slider("Dilation Size", 1, 15, 3)
-
         st.subheader("Edge Overlay Settings")
         edge_color = st.color_picker("Edge Color", "#FF69B4")
         edge_thick = st.slider("Edge Thickness", 1, 10, 2)
-
         st.subheader("Background Removal / Replacement")
         bg_option = st.selectbox("Background", ["Transparent", "Black", "White", "Custom Color"])
         if bg_option == "Custom Color":
-            bg_color = st.color_picker("Pick BG Color", "#ffc5d3")
+            bg_color = st.color_picker("Pick BG Color", "#ffd0dc")
         else:
             bg_color = {"Black":"#000000", "White":"#FFFFFF", "Transparent":None}[bg_option]
 else:
@@ -153,7 +169,6 @@ else:
 output = tta_inference(model, img_tensor)
 prob_mask = torch.softmax(output, dim=1)[0,1].cpu().numpy()
 final_mask = refine_mask(prob_mask, min_size=min_size, dilate_size=dilate_size)
-
 mask_resized = Image.fromarray((final_mask*255).astype(np.uint8)).resize(image.size, resample=Image.NEAREST)
 mask_bool = np.array(mask_resized).astype(bool)
 
