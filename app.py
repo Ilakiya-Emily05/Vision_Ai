@@ -12,17 +12,20 @@ import io
 import gdown
 import os
 
+# --- Device ---
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 num_classes = 2
 image_size = 256
 
+# --- Google Drive links ---
 model_file_id = "1UKF-vg3I-csqeNzOmvf0Z-daEKi-o84h"
 model_path = "deeplabv3_resumed_epoch30.pth"
 demo_file_id = "1t_gh8qPnjwpu7WwPQBz9YNp16ARvL8M8"
-demo_path = "demo_image.png"
 how_it_works_file_id = "1RMd3LiX84ZgDQUWQqG5jfWPBqGoiDPzJ"
+demo_path = "demo_image.png"
 how_it_works_path = "how_it_works.png"
 
+# --- Download files if missing ---
 if not os.path.exists(model_path):
     gdown.download(f"https://drive.google.com/uc?id={model_file_id}", model_path, quiet=False)
 
@@ -32,6 +35,7 @@ if not os.path.exists(demo_path):
 if not os.path.exists(how_it_works_path):
     gdown.download(f"https://drive.google.com/uc?id={how_it_works_file_id}", how_it_works_path, quiet=False)
 
+# --- Load model ---
 @st.cache_resource(show_spinner=True)
 def load_model():
     model = torchvision.models.segmentation.deeplabv3_resnet50(
@@ -67,6 +71,7 @@ def refine_mask(prob_mask, min_size=500, dilate_size=3):
     return mask.astype(np.uint8)
 
 def tta_inference(model, img_tensor, scales=[0.75,1.0,1.25], flips=[None,'h','v']):
+    model.eval()
     _, C, H, W = img_tensor.shape
     agg_output = torch.zeros((1, num_classes, H, W), device=img_tensor.device)
     for scale in scales:
@@ -86,39 +91,36 @@ def tta_inference(model, img_tensor, scales=[0.75,1.0,1.25], flips=[None,'h','v'
     agg_output /= (len(scales)*len(flips))
     return agg_output
 
+# --- Streamlit page config ---
 st.set_page_config(page_title="Pixel Wizard", layout="wide")
-st.markdown(
-    """
-    <style>
-    @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
-    .stApp {
-        background-color: #D27AFF;
-        font-family: 'Press Start 2P', cursive;
-    }
-    .title {
-        font-size:40px;
-        color:#fff;
-        text-align:center;
-        font-weight:bold;
-    }
-    .tagline {
-        font-size:18px;
-        text-align:center;
-        color:#f8f0ff;
-        margin-bottom:20px;
-    }
-    .how-it-works img{
-        max-width: 450px;
-        display:block;
-        margin-left:auto;
-        margin-right:auto;
-    }
-    </style>
-    """, unsafe_allow_html=True
-)
-st.markdown('<div class="how-it-works"><img src="{}"/></div>'.format(how_it_works_path), unsafe_allow_html=True)
-st.markdown('<div class="title">Pixel Wizard</div>', unsafe_allow_html=True)
-st.markdown('<div class="tagline">Transforming Images with Precision and Magic</div>', unsafe_allow_html=True)
+
+# --- CSS Styling ---
+st.markdown("""
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
+body {
+    background-color: #D98EFF;
+}
+h1, h2, h3, h4, h5, h6 {
+    font-family: 'Press Start 2P', cursive;
+}
+.stButton>button {
+    border-radius:10px;
+    background-color:#8B2EFF;
+    color:white;
+    font-family: 'Press Start 2P', cursive;
+}
+.css-1v0mbdj {padding:0px 10px 10px 10px;}  /* sidebar padding */
+</style>
+""", unsafe_allow_html=True)
+
+# --- Header ---
+st.image(how_it_works_path, use_column_width=False, width=350)
+st.markdown("<h1 style='text-align:center'>Pixel Wizard</h1>", unsafe_allow_html=True)
+st.markdown("<h3 style='text-align:center'>Transforming Images with Precision and Magic</h3>", unsafe_allow_html=True)
+
+# --- Sidebar ---
+st.sidebar.title("Pixel Wizard Controls")
 
 col1, col2 = st.columns(2)
 use_demo = col1.button("Try Demo Image")
@@ -127,7 +129,11 @@ uploaded_file = col2.file_uploader("Or Upload Your Own Image", type=["jpg","jpeg
 if not uploaded_file and not use_demo:
     st.stop()
 
-image = Image.open(demo_path if use_demo else uploaded_file).convert("RGB")
+if use_demo:
+    image = Image.open(demo_path).convert("RGB")
+else:
+    image = Image.open(uploaded_file).convert("RGB")
+
 img_tensor = transform(image).unsqueeze(0).to(device)
 
 st.sidebar.subheader("Mask Morphology Controls")
@@ -156,7 +162,7 @@ for contour in contours:
 st.sidebar.subheader("Background Removal / Replacement")
 bg_option = st.sidebar.selectbox("Background", ["Transparent", "Black", "White", "Custom Color"])
 if bg_option == "Custom Color":
-    bg_color = st.sidebar.color_picker("Pick BG Color", "#BC13FE")
+    bg_color = st.sidebar.color_picker("Pick BG Color", "#000000")
 else:
     bg_color = {"Black":"#000000", "White":"#FFFFFF", "Transparent":None}[bg_option]
 
@@ -182,9 +188,11 @@ st.subheader("Download Options")
 buf_orig = io.BytesIO()
 image.save(buf_orig, format="PNG")
 st.download_button("Download Original", buf_orig.getvalue(), file_name="original.png", mime="image/png")
+
 buf_seg = io.BytesIO()
 segmented_output.save(buf_seg, format="PNG")
 st.download_button("Download Segmented Object", buf_seg.getvalue(), file_name="segmented_object.png", mime="image/png")
+
 buf_edge = io.BytesIO()
 overlay_edges.save(buf_edge, format="PNG")
 st.download_button("Download Edge Overlay", buf_edge.getvalue(), file_name="edge_overlay.png", mime="image/png")
