@@ -20,22 +20,21 @@ model_file_id = "1UKF-vg3I-csqeNzOmvf0Z-daEKi-o84h"
 model_path = "deeplabv3_resumed_epoch30.pth"
 
 demo_file_id = "1t_gh8qPnjwpu7WwPQBz9YNp16ARvL8M8"
-demo_path = "demo_try.png"
+demo_path = "how_it_works.png"
 
-howitworks_file_id = "1RMd3LiX84ZgDQUWQqG5jfWPBqGoiDPzJ"
-placeholder_path = "how_it_works.png"
+if not os.path.exists(model_path):
+    st.info("Downloading segmentation model...")
+    gdown.download(f"https://drive.google.com/uc?id={model_file_id}", model_path, quiet=False)
+    st.success("Model downloaded!")
 
-for path, file_id in [(model_path, model_file_id),
-                      (demo_path, demo_file_id),
-                      (placeholder_path, howitworks_file_id)]:
-    if not os.path.exists(path):
-        gdown.download(f"https://drive.google.com/uc?id={file_id}", path, quiet=False)
+if not os.path.exists(demo_path):
+    st.info("Downloading demo image...")
+    gdown.download(f"https://drive.google.com/uc?id={demo_file_id}", demo_path, quiet=False)
+    st.success("Demo image downloaded!")
 
 @st.cache_resource(show_spinner=True)
 def load_model():
-    model = torchvision.models.segmentation.deeplabv3_resnet50(
-        pretrained=False, aux_loss=True, num_classes=num_classes
-    )
+    model = torchvision.models.segmentation.deeplabv3_resnet50(pretrained=False, aux_loss=True, num_classes=num_classes)
     checkpoint = torch.load(model_path, map_location=device)
     state_dict = {k: v for k, v in checkpoint.items() if "aux_classifier" not in k}
     model.load_state_dict(state_dict, strict=False)
@@ -88,25 +87,69 @@ def tta_inference(model, img_tensor, scales=[0.75,1.0,1.25], flips=[None,'h','v'
 
 st.set_page_config(page_title="Pixel Wizard", layout="wide")
 
-st.image(placeholder_path, use_column_width=True)
+st.markdown("""
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@700&display=swap');
+.big-header {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 48px;
+    color: #00FFFF;
+    text-align: center;
+    margin-bottom: -10px;
+}
+.tagline {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 20px;
+    color: #FFD700;
+    text-align: center;
+    margin-bottom: 40px;
+}
+.stButton>button {
+    background: linear-gradient(90deg, #ff00ff, #00ffff);
+    color: white;
+    font-size: 16px;
+    font-weight: bold;
+    padding: 12px 25px;
+    border-radius: 20px;
+    border: none;
+    box-shadow: 0 0 15px #ff00ff, 0 0 25px #00ffff;
+}
+.stSlider>div>div>div>div {
+    background: linear-gradient(to right, #ff00ff, #00ffff);
+    border-radius: 15px;
+    height: 12px;
+}
+.stSlider>div>div>div>div>div>div>div {
+    background-color: #fff;
+    border: 2px solid #00ffff;
+    width: 25px;
+    height: 25px;
+    border-radius: 50%;
+    box-shadow: 0 0 10px #ff00ff;
+}
+</style>
+""", unsafe_allow_html=True)
 
-st.title("✨ Pixel Wizard")
-st.markdown("_Magic segmentation & background removal at your fingertips_")
+st.markdown('<div class="big-header">Pixel Wizard</div>', unsafe_allow_html=True)
+st.markdown('<div class="tagline">✨ Transforming Images Like Magic ✨</div>', unsafe_allow_html=True)
+
+st.image(demo_path, use_column_width=True)
 
 col1, col2 = st.columns(2)
 use_demo = col1.button("Try Demo Image")
-uploaded_file = col2.file_uploader("Or Upload Your Own Image", type=["jpg","jpeg","png"])
+uploaded_file = col2.file_uploader("Upload Your Own Image", type=["jpg","jpeg","png"])
+
+if not uploaded_file and not use_demo:
+    st.stop()
 
 if use_demo:
     image = Image.open(demo_path).convert("RGB")
-elif uploaded_file:
-    image = Image.open(uploaded_file).convert("RGB")
 else:
-    st.stop()
+    image = Image.open(uploaded_file).convert("RGB")
 
 img_tensor = transform(image).unsqueeze(0).to(device)
 
-st.sidebar.subheader("Mask Morphology Controls")
+st.sidebar.subheader("Mask Controls")
 min_size = st.sidebar.slider("Min Object Size", 100, 5000, 500, 50)
 dilate_size = st.sidebar.slider("Dilation Size", 1, 15, 3)
 
@@ -116,9 +159,8 @@ final_mask = refine_mask(prob_mask, min_size=min_size, dilate_size=dilate_size)
 
 mask_resized = Image.fromarray((final_mask*255).astype(np.uint8)).resize(image.size, resample=Image.NEAREST)
 mask_bool = np.array(mask_resized).astype(bool)
-mask_img = Image.fromarray((mask_bool*255).astype(np.uint8))
 
-st.sidebar.subheader("Edge Overlay Settings")
+st.sidebar.subheader("Edge Overlay")
 edge_color = st.sidebar.color_picker("Edge Color", "#00FF00")
 edge_thick = st.sidebar.slider("Edge Thickness", 1, 10, 2)
 contours = measure.find_contours(np.array(mask_resized)//255, 0.5)
@@ -130,8 +172,8 @@ for contour in contours:
     if len(contour)>1:
         draw.line(contour, fill=edge_color, width=edge_thick)
 
-st.sidebar.subheader("Background Removal / Replacement")
-bg_option = st.sidebar.selectbox("Background", ["Transparent", "Black", "White", "Custom Color"])
+st.sidebar.subheader("Background")
+bg_option = st.sidebar.selectbox("Choose Background", ["Transparent", "Black", "White", "Custom Color"])
 if bg_option == "Custom Color":
     bg_color = st.sidebar.color_picker("Pick BG Color", "#000000")
 else:
@@ -151,19 +193,14 @@ segmented_output = Image.fromarray(seg_out)
 
 st.subheader("Results")
 col1, col2, col3 = st.columns(3)
-with col1: st.image(image, caption="Original Image", use_column_width=True)
-with col2: st.image(segmented_output, caption="Segmented / BG Removed", use_column_width=True)
+with col1: st.image(image, caption="Original", use_column_width=True)
+with col2: st.image(segmented_output, caption="Segmented", use_column_width=True)
 with col3: st.image(overlay_edges, caption="Edges Overlay", use_column_width=True)
 
-st.subheader("Download Options")
-buf_orig = io.BytesIO()
-image.save(buf_orig, format="PNG")
-st.download_button("Download Original", buf_orig.getvalue(), file_name="original.png", mime="image/png")
-
-buf_seg = io.BytesIO()
-segmented_output.save(buf_seg, format="PNG")
-st.download_button("Download Segmented Object", buf_seg.getvalue(), file_name="segmented_object.png", mime="image/png")
-
-buf_edge = io.BytesIO()
-overlay_edges.save(buf_edge, format="PNG")
-st.download_button("Download Edge Overlay", buf_edge.getvalue(), file_name="edge_overlay.png", mime="image/png")
+st.subheader("Download")
+buf_orig = io.BytesIO(); image.save(buf_orig, format="PNG")
+st.download_button("Original", buf_orig.getvalue(), file_name="original.png", mime="image/png")
+buf_seg = io.BytesIO(); segmented_output.save(buf_seg, format="PNG")
+st.download_button("Segmented", buf_seg.getvalue(), file_name="segmented.png", mime="image/png")
+buf_edge = io.BytesIO(); overlay_edges.save(buf_edge, format="PNG")
+st.download_button("Edges", buf_edge.getvalue(), file_name="edges.png", mime="image/png")
