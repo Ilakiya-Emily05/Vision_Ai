@@ -23,14 +23,10 @@ demo_file_id = "1RMd3LiX84ZgDQUWQqG5jfWPBqGoiDPzJ"
 demo_path = "how_it_works.png"
 
 if not os.path.exists(model_path):
-    st.info("Downloading segmentation model...")
     gdown.download(f"https://drive.google.com/uc?id={model_file_id}", model_path, quiet=False)
-    st.success("Model downloaded!")
 
 if not os.path.exists(demo_path):
-    st.info("Downloading demo image...")
     gdown.download(f"https://drive.google.com/uc?id={demo_file_id}", demo_path, quiet=False)
-    st.success("Demo image downloaded!")
 
 @st.cache_resource(show_spinner=True)
 def load_model():
@@ -109,7 +105,6 @@ final_mask = refine_mask(prob_mask, min_size=min_size, dilate_size=dilate_size)
 
 mask_resized = Image.fromarray((final_mask*255).astype(np.uint8)).resize(image.size, resample=Image.NEAREST)
 mask_bool = np.array(mask_resized).astype(bool)
-mask_img = Image.fromarray((mask_bool*255).astype(np.uint8))
 
 st.sidebar.subheader("Edge Overlay Settings")
 edge_color = st.sidebar.color_picker("Edge Color", "#00FF00")
