@@ -11,6 +11,7 @@ from skimage import measure
 import io
 import gdown
 import os
+import base64
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 num_classes = 2
@@ -25,10 +26,8 @@ how_it_works_path = "how_it_works.png"
 
 if not os.path.exists(model_path):
     gdown.download(f"https://drive.google.com/uc?id={model_file_id}", model_path, quiet=False)
-
 if not os.path.exists(demo_path):
     gdown.download(f"https://drive.google.com/uc?id={demo_file_id}", demo_path, quiet=False)
-
 if not os.path.exists(how_it_works_path):
     gdown.download(f"https://drive.google.com/uc?id={how_it_works_file_id}", how_it_works_path, quiet=False)
 
@@ -97,7 +96,7 @@ body {
     background-color: #ffc5d3;
 }
 
-h1,h2,h3,h4,h5,h6,p,span,button,div {
+h1,h3 {
     font-family: 'Press Start 2P', cursive !important;
 }
 
@@ -105,7 +104,6 @@ h1,h2,h3,h4,h5,h6,p,span,button,div {
     border-radius:10px;
     background: linear-gradient(135deg, #FF69B4, #FFB6C1);
     color:white;
-    font-family: 'Press Start 2P', cursive;
 }
 
 .css-1v0mbdj {padding:0px 10px 10px 10px;}
@@ -114,7 +112,7 @@ h1,h2,h3,h4,h5,h6,p,span,button,div {
 
 st.markdown("<h1 style='text-align:center'>Pixel Wizard</h1>", unsafe_allow_html=True)
 st.markdown("<h3 style='text-align:center'>Transforming Images with Precision and Magic</h3>", unsafe_allow_html=True)
-st.image(how_it_works_path, use_column_width=False, width=300, caption="How It Works", output_format="PNG")
+st.image(how_it_works_path, width=300, use_container_width=False, caption="How It Works")
 
 st.sidebar.title("Pixel Wizard Controls")
 
@@ -177,9 +175,9 @@ segmented_output = Image.fromarray(seg_out)
 
 st.subheader("Results")
 col1, col2, col3 = st.columns(3)
-with col1: st.image(image, caption="Original Image", use_column_width=True)
-with col2: st.image(segmented_output, caption="Segmented / BG Removed", use_column_width=True)
-with col3: st.image(overlay_edges, caption="Edges Overlay", use_column_width=True)
+with col1: st.image(image, caption="Original Image", use_container_width=True)
+with col2: st.image(segmented_output, caption="Segmented / BG Removed", use_container_width=True)
+with col3: st.image(overlay_edges, caption="Edges Overlay", use_container_width=True)
 
 st.subheader("Download Options")
 buf_orig = io.BytesIO()
@@ -193,3 +191,7 @@ st.download_button("Download Segmented Object", buf_seg.getvalue(), file_name="s
 buf_edge = io.BytesIO()
 overlay_edges.save(buf_edge, format="PNG")
 st.download_button("Download Edge Overlay", buf_edge.getvalue(), file_name="edge_overlay.png", mime="image/png")
+
+# --- cute roaming cat at bottom ---
+cat_gif_url = "https://media.giphy.com/media/JIX9t2j0ZTN9S/giphy.gif"
+st.markdown(f"<div style='text-align:center'><img src='{cat_gif_url}' width='100'></div>", unsafe_allow_html=True)
