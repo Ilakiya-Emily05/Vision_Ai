@@ -1,14 +1,14 @@
-🖼️ VisionExtract: Subject Isolation from Images
+## 🖼️ VisionExtract: Subject Isolation from Images
 
 A deep learning–based image segmentation system that automatically extracts the main subject from an image and removes the background. The output preserves the subject exactly as in the original image while turning everything else completely black. Built with PyTorch and modern segmentation architectures.
 
-📘 About This Project
+## 📘 About This Project
 
 VisionExtract focuses on semantic segmentation to isolate the primary subject in an image. Given any input image, the model predicts a pixel-wise binary mask that separates the subject from the background, enabling clean subject extraction.
 
 This project is useful for photography automation, digital art, AR/VR pipelines, virtual backgrounds, and content creation workflows.
 
-🔍 Features
+### 🔍 Features
 
 🧠 Automatic subject detection using deep learning
 
@@ -22,7 +22,7 @@ This project is useful for photography automation, digital art, AR/VR pipelines,
 
 🌐 Optional Streamlit-based inference pipeline
 
-🚀 Tech Stack
+### 🚀 Tech Stack
 
 Framework: PyTorch
 
@@ -36,7 +36,7 @@ Visualization: Matplotlib
 
 Deployment: Streamlit (optional)
 
-🧠 Dataset Info
+### 🧠 Dataset Info
 
 Source: COCO 2017 Dataset
 
@@ -48,7 +48,7 @@ Annotations: Pixel-wise segmentation masks
 
 Categories: 80+ object classes
 
-Why COCO:
+### Why COCO:
 
 High-quality mask annotations
 
@@ -56,30 +56,30 @@ Diverse scenes, lighting, and perspectives
 
 Ideal for real-world generalization
 
-🧰 Installation & Usage
-🔧 Setup Environment
+## 🧰 Installation & Usage
+### 🔧 Setup Environment
 
-Clone the repository:
+### Clone the repository:
 
 git clone https://github.com/Ilakiya-Emily05/Vision_Ai.git
 cd Vision_Ai
 
 
-(Optional) Create a virtual environment:
+### (Optional) Create a virtual environment:
 
 conda create -n visionextract python=3.9
 conda activate visionextract
 
 
-Install dependencies:
+### Install dependencies:
 
 pip install -r requirements.txt
 
 
 Run inference or training scripts as required.
 
-⚙️ Training Pipeline
-📌 Data Preprocessing
+## ⚙️ Training Pipeline
+### 📌 Data Preprocessing
 
 Resize images to 256×256
 
@@ -87,7 +87,7 @@ Normalize pixel values
 
 Convert multi-class masks to binary masks
 
-Augment data using:
+## Augment data using:
 
 Flips (horizontal & vertical)
 
@@ -95,13 +95,13 @@ Rotation, scaling, shifting
 
 Brightness and contrast adjustments
 
-📌 Model Phases
+## 📌 Model Phases
 
 Phase 1: UNet with ResNet34 backbone (baseline)
 
 Phase 2: DeepLabV3 with ResNet50 for improved context & boundaries
 
-📌 Optimization
+## 📌 Optimization
 
 Mixed Precision Training (AMP)
 
@@ -109,7 +109,7 @@ Backbone unfreezing for fine-tuning
 
 Test-Time Augmentation (TTA)
 
-📊 Evaluation Metrics
+### 📊 Evaluation Metrics
 
 Intersection over Union (IoU)
 
@@ -123,7 +123,7 @@ Both quantitative scores and qualitative before/after visual checks were used.�
 
 image-segmentation computer-vision deep-learning pytorch semantic-segmentation coco-dataset streamlit
 
-📌 Future Improvements
+### 📌 Future Improvements
 
  Multi-object segmentation
 
@@ -132,8 +132,6 @@ image-segmentation computer-vision deep-learning pytorch semantic-segmentation c
  Real-time webcam support
 
  Web deployment (Hugging Face / Streamlit Cloud)
-
-🔗 References
 
 COCO Dataset
 
