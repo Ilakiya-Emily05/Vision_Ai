@@ -1,4 +1,4 @@
-## 🖼️ VisionExtract: Subject Isolation from Images
+##  VisionExtract: Subject Isolation from Images
 
 A deep learning–based image segmentation system that automatically extracts the main subject from an image and removes the background. The output preserves the subject exactly as in the original image while turning everything else completely black. Built with PyTorch and modern segmentation architectures.
 
